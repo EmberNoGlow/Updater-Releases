@@ -56,11 +56,7 @@ def show_toast_message(parent, message, message_type="info"):
 
 def _is_rate_limited(exc):
     """Return True if the requests exception is a GitHub 403/429 rate limit response."""
-    return (
-        isinstance(exc, requests.HTTPError)
-        and exc.response is not None
-        and exc.response.status_code in (403, 429)
-    )
+    return isinstance(exc, requests.HTTPError) and exc.response is not None and exc.response.status_code in (403, 429)
 
 
 class AutoUpdater(QMainWindow):
@@ -124,14 +120,14 @@ class AutoUpdater(QMainWindow):
         header.setSectionResizeMode(Col.URL, QHeaderView.Stretch)
         header.setSectionResizeMode(Col.ACTION, QHeaderView.Fixed)
         _col_widths = {
-            Col.FOLDER: 250,
+            Col.FOLDER: 300,
             Col.REGEX: 200,
             Col.UNPACK: 60,
             Col.LATEST_RELEASE: 120,
             Col.DOWNLOADED_VERSION: 140,
             Col.DOWNLOADED_RELEASE: 210,
             Col.LAST_UPDATED: 165,
-            Col.ACTION: 450,
+            Col.ACTION: 430,
         }
         for col, w in _col_widths.items():
             self.table.setColumnWidth(col, w)
@@ -142,6 +138,7 @@ class AutoUpdater(QMainWindow):
             item.setToolTip(label)
             item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSortingEnabled(True)
         self.table.itemSelectionChanged.connect(self.on_row_selected)
         layout.addWidget(self.table)
@@ -195,6 +192,7 @@ class AutoUpdater(QMainWindow):
         self.selected_row = None
         self._pending_release_name = ""
         self._pending_release_tag = ""
+        self._pending_row_items = None  # direct item refs, immune to sort reordering
         self._cache = {}  # {repo_url: {"releases": [...], "releases_ts": datetime, "assets": {tag: {"list": [...], "ts": datetime}}}}
         self._update_all_mode = False
         self._update_queue = []  # rows waiting to be downloaded in update-all run
@@ -243,7 +241,7 @@ class AutoUpdater(QMainWindow):
         action_widget = QWidget()
         action_layout = QHBoxLayout()
         action_layout.setContentsMargins(8, 0, 8, 0)
-        update_btn = QPushButton(" ➡️ Update ")
+        update_btn = QPushButton(" ➡️ Fetch ")
         update_btn.clicked.connect(lambda: self.update_repository(self._row_of_widget(update_btn)))
         action_layout.addWidget(update_btn)
         changelog_btn = QPushButton(" 📄 Changelog ")
@@ -272,7 +270,7 @@ class AutoUpdater(QMainWindow):
 
     def _make_readonly_item(self, text=""):
         item = QTableWidgetItem(text)
-        item.setFlags(Qt.ItemIsEnabled)
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         return item
 
     def add_repository(self):
@@ -301,7 +299,7 @@ class AutoUpdater(QMainWindow):
         self.table.setItem(row, Col.REGEX, QTableWidgetItem(""))
 
         unpack_item = QTableWidgetItem()
-        unpack_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+        unpack_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         unpack_item.setCheckState(Qt.Unchecked)
         self.table.setItem(row, Col.UNPACK, unpack_item)
 
@@ -329,8 +327,11 @@ class AutoUpdater(QMainWindow):
             self._cache.setdefault(repo_url, {}).update({"releases": releases, "releases_ts": datetime.datetime.now()})
             return releases
         except requests.RequestException as e:
-            msg = "GitHub API rate limit exceeded — wait a minute or add a token." \
-                if _is_rate_limited(e) else f"Failed to fetch releases: {e}"
+            msg = (
+                "GitHub API rate limit exceeded — wait a minute or add a token."
+                if _is_rate_limited(e)
+                else f"Failed to fetch releases: {e}"
+            )
             show_toast_message(self, msg, "error")
             return entry.get("releases", ["latest"])  # serve stale cache on error
 
@@ -357,8 +358,9 @@ class AutoUpdater(QMainWindow):
             }
             return assets
         except requests.RequestException as e:
-            msg = "GitHub API rate limit exceeded — wait a minute or add a token." \
-                if _is_rate_limited(e) else f"Failed to fetch assets: {e}"
+            msg = (
+                "GitHub API rate limit exceeded — wait a minute or add a token." if _is_rate_limited(e) else f"Failed to fetch assets: {e}"
+            )
             show_toast_message(self, msg, "error")
             return asset_entry.get("list", [])  # serve stale cache on error
 
@@ -394,10 +396,20 @@ class AutoUpdater(QMainWindow):
             self.asset_dropdown.addItem(label, asset)
 
     def update_selected(self):
-        if self.selected_row is None:
+        selected_rows = sorted(set(idx.row() for idx in self.table.selectedIndexes()))
+        if not selected_rows:
             return
 
-        row = self.selected_row
+        if len(selected_rows) > 1:
+            # Multiple rows: queue all using auto-pick (same logic as Update All)
+            self._update_all_mode = True
+            self.update_all_btn.setEnabled(False)
+            self._update_queue = selected_rows
+            self._process_update_queue()
+            return
+
+        # Single row: use the exact release/asset shown in the dropdowns
+        row = selected_rows[0]
         download_folder = self.table.item(row, Col.FOLDER).text()
 
         selected_asset = self.asset_dropdown.currentData()
@@ -413,6 +425,12 @@ class AutoUpdater(QMainWindow):
         repo_url = self.table.item(row, Col.URL).text()
         resolved = self._cache.get(repo_url, {}).get("assets", {}).get(release_tag, {}).get("resolved_tag", release_tag)
         self._pending_release_tag = resolved
+        self._pending_row_items = {
+            "last_updated": self.table.item(row, Col.LAST_UPDATED),
+            "downloaded_release": self.table.item(row, Col.DOWNLOADED_RELEASE),
+            "downloaded_version": self.table.item(row, Col.DOWNLOADED_VERSION),
+            "regex": self.table.item(row, Col.REGEX),
+        }
 
         # Show progress dialog
         self.progress_dialog = QProgressDialog("Starting download...", "Cancel", 0, 100, self)
@@ -460,15 +478,14 @@ class AutoUpdater(QMainWindow):
         if success:
             if not self._update_all_mode:
                 show_toast_message(self, message, "success")
-            if self.selected_row is not None:
+            if self._pending_row_items is not None:
                 now = datetime.datetime.now().astimezone()
-                self.table.item(self.selected_row, Col.LAST_UPDATED).setText(now.strftime("%Y-%m-%d %H:%M:%S"))
-                self.table.item(self.selected_row, Col.LAST_UPDATED).setData(Qt.UserRole, now.isoformat())
-                self.table.item(self.selected_row, Col.DOWNLOADED_RELEASE).setText(self._pending_release_name)
-                self.table.item(self.selected_row, Col.DOWNLOADED_VERSION).setText(self._pending_release_tag)
-                regex_item = self.table.item(self.selected_row, Col.REGEX)
-                if not regex_item.text().strip():
-                    regex_item.setText(re.escape(self._pending_release_name))
+                self._pending_row_items["last_updated"].setText(now.strftime("%Y-%m-%d %H:%M:%S"))
+                self._pending_row_items["last_updated"].setData(Qt.UserRole, now.isoformat())
+                self._pending_row_items["downloaded_release"].setText(self._pending_release_name)
+                self._pending_row_items["downloaded_version"].setText(self._pending_release_tag)
+                if not self._pending_row_items["regex"].text().strip():
+                    self._pending_row_items["regex"].setText(re.escape(self._pending_release_name))
         else:
             show_toast_message(self, message, "error")
         if self._update_all_mode:
@@ -572,6 +589,12 @@ class AutoUpdater(QMainWindow):
         release_tag = "latest"
         resolved = self._cache.get(repo_url, {}).get("assets", {}).get(release_tag, {}).get("resolved_tag", release_tag)
         self._pending_release_tag = resolved
+        self._pending_row_items = {
+            "last_updated": self.table.item(row, Col.LAST_UPDATED),
+            "downloaded_release": self.table.item(row, Col.DOWNLOADED_RELEASE),
+            "downloaded_version": self.table.item(row, Col.DOWNLOADED_VERSION),
+            "regex": self.table.item(row, Col.REGEX),
+        }
 
         self.progress_dialog = QProgressDialog(f"Updating {repo_url.rstrip('/').split('/')[-1]}…", "Cancel", 0, 100, self)
         self.progress_dialog.setWindowTitle("Downloading...")
@@ -701,7 +724,7 @@ class AutoUpdater(QMainWindow):
                 self.table.setItem(row, Col.REGEX, QTableWidgetItem(repo.get("release_regex", "")))
 
                 unpack_item = QTableWidgetItem()
-                unpack_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                unpack_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                 unpack_item.setCheckState(Qt.Checked if repo.get("unpack_subfolder", False) else Qt.Unchecked)
                 self.table.setItem(row, Col.UNPACK, unpack_item)
 

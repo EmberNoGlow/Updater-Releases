@@ -495,3 +495,11 @@ QTimeEdit, QToolBox, QToolBox::tab, QToolBox::tab:selected {
 	color:rgb(81,72,65);
 	background-color: #ffffff;
 }
+QTableView::item:selected {
+	background-color: rgb(246, 134, 86);
+	color: #ffffff;
+}
+QTableView::item:selected:!active {
+	background-color: rgb(220, 110, 60);
+	color: #ffffff;
+}

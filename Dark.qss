@@ -625,11 +625,18 @@ QTableView::item:hover
 }
 
 
-QTableView::item:selected 
+QTableView::item:selected
 {
-    background-color: #1a1b1c;
-    border: 2px solid #4969ff;
-    color: #F0F0F0;
+    background-color: #4969ff;
+    color: #ffffff;
+
+}
+
+
+QTableView::item:selected:!active
+{
+    background-color: #3050cc;
+    color: #ffffff;
 
 }
 
