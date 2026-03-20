@@ -157,7 +157,7 @@ QPushButton
 	border-width: 1px;
 	border-radius: 3px;
 	border-color: #051a39;
-	padding: 5px;
+	padding: 5px 9px;
 
 }
 
@@ -167,6 +167,7 @@ QPushButton::disabled
 	background-color: #404040;
 	color: #656565;
 	border-color: #051a39;
+	padding: 5px 9px;
 
 }
 
@@ -179,7 +180,7 @@ QPushButton::hover
 	border-width: 1px;
 	border-radius: 3px;
 	border-color: #051a39;
-	padding: 5px;
+	padding: 5px 9px;
 
 }
 
@@ -192,7 +193,7 @@ QPushButton::pressed
 	border-width: 1px;
 	border-radius: 3px;
 	border-color: #051a39;
-	padding: 5px;
+	padding: 5px 9px;
 
 }
 
@@ -249,9 +250,8 @@ QComboBox
     background-color: #607cff;
     border: 1px solid;
     border-radius: 3px;
-    padding-left: 6px;
+    padding: 4px 6px;
     color: #ffffff;
-    height: 20px;
 
 }
 
@@ -295,11 +295,10 @@ QComboBox::drop-down
 {
     subcontrol-origin: padding;
     subcontrol-position: top right;
-    width: 15px;
-    border-left-width: 0px;
-    border-left-color: darkgray;
-    border-left-style: solid; 
-    border-top-right-radius: 3px; 
+    width: 20px;
+    background-color: #4969ff;
+    border-left: 1px solid #383870;
+    border-top-right-radius: 3px;
     border-bottom-right-radius: 3px;
 
 }
@@ -307,7 +306,7 @@ QComboBox::drop-down
 
 QComboBox::down-arrow
 {
-    image: url(://arrow-down.png);
+    image: url(down-arrow-white.svg);
     width: 8px;
     height: 8px;
 }
@@ -626,11 +625,18 @@ QTableView::item:hover
 }
 
 
-QTableView::item:selected 
+QTableView::item:selected
 {
-    background-color: #1a1b1c;
-    border: 2px solid #4969ff;
-    color: #F0F0F0;
+    background-color: #4969ff;
+    color: #ffffff;
+
+}
+
+
+QTableView::item:selected:!active
+{
+    background-color: #3050cc;
+    color: #ffffff;
 
 }
 

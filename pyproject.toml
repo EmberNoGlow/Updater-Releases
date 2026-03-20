@@ -1,0 +1,32 @@
+[project]
+name = "updater-releases"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["markdown>=3.0"]
+
+[dependency-groups]
+dev = ["black>=24.0", "pyinstaller>=6.0"]
+
+[tool.black]
+line-length = 140
+target-version = ["py312"]
+
+[tool.pylint.main]
+extension-pkg-allow-list = ["PySide6"]
+
+[tool.pylint.format]
+max-line-length = 140
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "no-member",
+    "too-many-instance-attributes",
+    "too-many-statements",
+    "too-many-locals",
+    "broad-exception-caught",
+]

@@ -139,7 +139,7 @@ QPushButton{
 	border-left-color: rgb(165,165,165);
 	border-top-color: rgb(180,180,180);
 	border-style: solid;
-	padding: 4px;
+	padding: 4px 8px;
 	background-color: qlineargradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(220, 220, 220, 255), stop:1 rgba(255, 255, 255, 255));
 }
 QPushButton:hover{
@@ -151,7 +151,7 @@ QPushButton:hover{
 	border-left-color:  qlineargradient(spread:pad, x1:1, y1:0, x2:0, y2:0, stop:0 rgba(200, 70, 20, 255), stop:1 rgba(255,150,60, 255));
 	border-bottom-color: rgb(200,70,20);
 	border-style: solid;
-	padding: 2px;
+	padding: 4px 8px;
 	background-color: qlineargradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(220, 220, 220, 255), stop:1 rgba(255, 255, 255, 255));
 }
 QPushButton:default{
@@ -163,7 +163,7 @@ QPushButton:default{
 	border-left-color:  qlineargradient(spread:pad, x1:1, y1:0, x2:0, y2:0, stop:0 rgba(200, 70, 20, 255), stop:1 rgba(255,150,60, 255));
 	border-bottom-color: rgb(200,70,20);
 	border-style: solid;
-	padding: 2px;
+	padding: 4px 8px;
 	background-color: qlineargradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(220, 220, 220, 255), stop:1 rgba(255, 255, 255, 255));
 }
 QPushButton:pressed{
@@ -176,7 +176,7 @@ QPushButton:pressed{
 	border-left-color:  qlineargradient(spread:pad, x1:1, y1:0, x2:0, y2:0, stop:0 rgba(200, 70, 20, 255), stop:1 rgba(255,150,60, 200));
 	border-bottom-color: rgba(200,70,20,200);
 	border-style: solid;
-	padding: 2px;
+	padding: 4px 8px;
 	background-color: qlineargradient(spread:pad, x1:0.5, y1:0, x2:0.5, y2:1, stop:0 rgba(220, 220, 220, 255), stop:1 rgba(255, 255, 255, 255));
 }
 QPushButton:disabled{
@@ -494,4 +494,12 @@ QTextEdit {
 QTimeEdit, QToolBox, QToolBox::tab, QToolBox::tab:selected {
 	color:rgb(81,72,65);
 	background-color: #ffffff;
+}
+QTableView::item:selected {
+	background-color: rgb(246, 134, 86);
+	color: #ffffff;
+}
+QTableView::item:selected:!active {
+	background-color: rgb(220, 110, 60);
+	color: #ffffff;
 }
